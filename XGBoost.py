@@ -8,15 +8,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from scipy.stats import norm
-from numpy import linspace,meshgrid,cos
+from numpy import meshgrid
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import math
-from pandas_datareader.data import Options
 import datetime as dt
-from lxml import html  
-from collections import OrderedDict
 import time
 import re
 from urllib.request import urlopen
@@ -34,8 +30,8 @@ Date = ["2019-01-10 19:00:00","2019-01-17 19:00:00","2019-01-24 19:00:00","2019-
           "2019-04-17 20:00:00","2019-06-20 20:00:00","2019-07-18 20:00:00","2020-01-16 19:00:00",
           "2020-06-18 20:00:00","2021-01-14 19:00:00"]
 #Date = ["2019-01-17 19:00:00"]
-
-K=list(range(para.S-10,para.S+10))
+##############notice that K in every date of option are differently distributed
+K=list(range(para.S-20,para.S+10))
 T=[]
 for d in Date:
     import time
@@ -84,10 +80,10 @@ def parseOpt(para,Date):
     return callOpt,putOpt,callStrike,putStrike
 
 #
-#######################Retrieve real option price with other sourse
+#######################Retrieve real option price with yahoo
 def RealPrice(callOpt,putOpt,t,k,T,Date,opt):
     date=Date[T.index(t)][:10]
-    k=str(k)+".00"#############################because this k is intagers when initialized
+    k=str(k)+".00"#############################because this k is intager when initialized
     if opt==1:##choose return option type
         try:return float(callOpt[date][0].loc[k][0])
         except:
@@ -111,8 +107,6 @@ def implied_volatility(Price,Exercise,Time,para):
     P = float(Price)
     K = float(Exercise)
     T = float(Time)
-
-   
     left=0.0001
     right=10
     PLeft=BSPrice(K,T,left,para)-P
@@ -140,8 +134,57 @@ def surfIV(K,T,callOpt,putOpt,para):
             p=RealPrice(callOpt,putOpt,t,k,T,Date,para.opt)##I choose call option here
             cur.append(implied_volatility(p,k,t,para))
         IV.append(cur)
-    #Iv=pd.DataFrame(IV,index=K,columns=T)
-    #plt.plot(Iv)
+    #iv=pd.DataFrame(IV,index=K,columns=T)
+    #########################################  smooth the iv refill the zeros with average
+#    for i in IV:
+#        for j in range(len(i)):
+#            if i[j]==0:
+#                if j==0:
+#                    i[j]=i[j+1]/2
+#                elif j==len(i)-1:
+#                    i[j]=i[j-1]/2
+#                else:
+#                    i[j]=(i[j-1]+i[j+1])/2
+#    IV=np.array(IV).T.tolist()
+#    for i in IV:
+#        for j in range(len(i)):
+#            if i[j]==0:
+#                if j==0:
+#                    i[j]=i[j+1]/2
+#                elif j==len(i)-1:
+#                    i[j]=i[j-1]/2
+#                else:
+#                    i[j]=(i[j-1]+i[j+1])/2
+    ########################################smooth the iv refill the zeros with last value
+
+    for i in IV:
+        for j in range(len(i)):
+            if i[j]==0:
+                if j==0:
+                    k=j+1
+                    while i[k]==0 and k!=len(i)-1:##find next nonzero
+                        k+=1
+                    if k==len(i)-1:
+                        break
+                    i[j]=i[k]
+                else:
+                    i[j]=i[j-1]
+    IV=np.array(IV).T.tolist()
+    for i in IV:
+        for j in range(len(i)):
+            if i[j]==0:
+                if j==0:
+                    k=j+1
+                    while i[k]==0 and k!=len(i)-1:##find next nonzero
+                        k+=1
+                    i[j]=i[k]
+                    if k==len(i)-1:
+                        break
+                    
+                else:
+                    i[j]=i[j-1]
+    IV=np.array(IV).T.tolist()
+#    plt.plot(Iv)
     return IV
 #####################plot the surf
 def plotIV(K,T,callOpt,putOpt,para):
