@@ -2,7 +2,7 @@
 
 Projects I have done in internships or based on my own interests
 
-//C++ final analyzes the EPS surprise effect on stock prices, in which crawler are used to parse data from Yahoo finance
+//C++_Final_Projects analyzes the EPS surprise effect on stock prices, in which crawler are used to parse data from Yahoo finance
 
 //IV is the Implied Volitility calculation project
 
