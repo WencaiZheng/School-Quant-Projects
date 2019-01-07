@@ -13,10 +13,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import math
-from pandas_datareader.data import Options
-import datetime as dt
 from lxml import html  
-from collections import OrderedDict
 import time
 import re
 from urllib.request import urlopen
