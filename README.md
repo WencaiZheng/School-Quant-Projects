@@ -1,6 +1,6 @@
 # Noven
 
-projects I have done in internships or based on my own interests
+Projects I have done in internships or based on my own interests
 
 //C++ final analyzes the EPS surprise effect on stock prices, in which crawler are used to parse data from Yahoo finance
 
