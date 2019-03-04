@@ -8,15 +8,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from scipy.stats import norm
-from numpy import linspace,meshgrid,cos
+from numpy import meshgrid
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import math
-from pandas_datareader.data import Options
 import datetime as dt
-from lxml import html  
-from collections import OrderedDict
 import time
 import re
 from urllib.request import urlopen
@@ -25,15 +21,17 @@ from bs4 import BeautifulSoup
 class Para():
     def __init__(self):
         self.opt=1 ####choose 1 as call,0 as put.
-
+        self.S=148
+        self.r=0.05
+        self.ticker = "AAPL"
+para = Para()
 Date = ["2019-01-10 19:00:00","2019-01-17 19:00:00","2019-01-24 19:00:00","2019-01-31 19:00:00",
           "2019-02-07 19:00:00","2019-02-14 19:00:00","2019-02-21 19:00:00","2019-03-14 20:00:00",
           "2019-04-17 20:00:00","2019-06-20 20:00:00","2019-07-18 20:00:00","2020-01-16 19:00:00",
           "2020-06-18 20:00:00","2021-01-14 19:00:00"]
 #Date = ["2019-01-17 19:00:00"]
-ticker = "AAPL"
-S=148
-K=list(range(S-10,S+10))
+##############notice that K in every date of option are differently distributed
+K=list(range(para.S-40,para.S+10))
 T=[]
 for d in Date:
     import time
@@ -43,7 +41,7 @@ for d in Date:
     T.append(round(time/365,4))
 
 ##########################parse option data from yahoo finance
-def parseOpt(ticker,Date):
+def parseOpt(para,Date):
     callOpt={}
     putOpt={}
     for date in Date:
@@ -51,7 +49,7 @@ def parseOpt(ticker,Date):
         timeArray = time.strptime(date, "%Y-%m-%d %H:%M:%S")
         timestamp = int(time.mktime(timeArray))
         htmlz = urlopen(
-            "https://finance.yahoo.com/quote/%s/options?straddle=false&date=%s"%(ticker,timestamp)).read().decode('utf-8')
+            "https://finance.yahoo.com/quote/%s/options?straddle=false&date=%s"%(para.ticker,timestamp)).read().decode('utf-8')
         soup = BeautifulSoup(htmlz, features='lxml')
         Strike= soup.find_all('td', {'class': re.compile('data-col2')})
         Price=soup.find_all('td', {'class': re.compile('data-col3')})
@@ -82,10 +80,10 @@ def parseOpt(ticker,Date):
     return callOpt,putOpt,callStrike,putStrike
 
 #
-#######################Retrieve real option price with other sourse
+#######################Retrieve real option price with yahoo
 def RealPrice(callOpt,putOpt,t,k,T,Date,opt):
     date=Date[T.index(t)][:10]
-    k=str(k)+".00"#############################because this k is intagers when initialized
+    k=str(k)+".00"#############################because this k is intager when initialized
     if opt==1:##choose return option type
         try:return float(callOpt[date][0].loc[k][0])
         except:
@@ -97,33 +95,28 @@ def RealPrice(callOpt,putOpt,t,k,T,Date,opt):
             print(date,"and the",k,"don't exist")
             return 0
 ########################BS price
-def BSPrice(Stock,Exercise,Time,Rf,sigma):
-    S = float(Stock)
-    E = float(Exercise)
+def BSPrice(Exercise,Time,sigma,para):
+    K = float(Exercise)
     T = float(Time)
-    r = float(Rf)
-    d_1 = float(float((math.log(S/E)+(r+(sigma**2)/2)*T))/float((sigma*(math.sqrt(T)))))
-    d_2 = float(float((math.log(S/E)+(r-(sigma**2)/2)*T))/float((sigma*(math.sqrt(T)))))
-    BSPrice = float(S*norm.cdf(d_1) - E*math.exp(-r*T)*norm.cdf(d_2))
+    d_1 = float(float((math.log(para.S/K)+(para.r+(sigma**2)/2)*T))/float((sigma*(math.sqrt(T)))))
+    d_2 = float(float((math.log(para.S/K)+(para.r-(sigma**2)/2)*T))/float((sigma*(math.sqrt(T)))))
+    BSPrice = float(para.S*norm.cdf(d_1) - K*math.exp(-para.r*T)*norm.cdf(d_2))
     return BSPrice
 ######################calculate the impied volatility
-def implied_volatility(Price,Stock,Exercise,Time,Rf):
+def implied_volatility(Price,Exercise,Time,para):
     P = float(Price)
-    S = float(Stock)
-    E = float(Exercise)
+    K = float(Exercise)
     T = float(Time)
-    r = float(Rf)
-   
     left=0.0001
     right=10
-    PLeft=BSPrice(S,E,T,r,left)-P
-    PRight=BSPrice(S,E,T,r,right)-P
+    PLeft=BSPrice(K,T,left,para)-P
+    PRight=BSPrice(K,T,right,para)-P
     while  right-left> 0.001:
-        PLeft=BSPrice(S,E,T,r,left)-P
-        PRight=BSPrice(S,E,T,r,right)-P
+        PLeft=BSPrice(K,T,left,para)-P
+        PRight=BSPrice(K,T,right,para)-P
         if PLeft*PRight<=0:
             sigma=(left+right)/2
-            PMid=BSPrice(S,E,T,r,sigma)-P
+            PMid=BSPrice(K,T,sigma,para)-P
             if PMid*PLeft<0:
                 right=sigma
             else:
@@ -133,21 +126,70 @@ def implied_volatility(Price,Stock,Exercise,Time,Rf):
             break
     return (left+right)/2
 #####################calculate the surf of implied volatitlity
-def surfIV(S,K,T,callOpt,putOpt):
+def surfIV(K,T,callOpt,putOpt,para):
     IV=[]
     for k in K:
         cur=[]
         for t in T:
-            p=RealPrice(callOpt,putOpt,t,k,T,Date,Para.opt)##I choose call option here
-            cur.append(implied_volatility(p,S,k,t,0.05))
+            p=RealPrice(callOpt,putOpt,t,k,T,Date,para.opt)##I choose call option here
+            cur.append(implied_volatility(p,k,t,para))
         IV.append(cur)
-    #Iv=pd.DataFrame(IV,index=K,columns=T)
-    #plt.plot(Iv)
+    #iv=pd.DataFrame(IV,index=K,columns=T)
+    #########################################  smooth the iv refill the zeros with average
+#    for i in IV:
+#        for j in range(len(i)):
+#            if i[j]==0:
+#                if j==0:
+#                    i[j]=i[j+1]/2
+#                elif j==len(i)-1:
+#                    i[j]=i[j-1]/2
+#                else:
+#                    i[j]=(i[j-1]+i[j+1])/2
+#    IV=np.array(IV).T.tolist()
+#    for i in IV:
+#        for j in range(len(i)):
+#            if i[j]==0:
+#                if j==0:
+#                    i[j]=i[j+1]/2
+#                elif j==len(i)-1:
+#                    i[j]=i[j-1]/2
+#                else:
+#                    i[j]=(i[j-1]+i[j+1])/2
+    ########################################smooth the iv refill the zeros with last value
+
+    for i in IV:
+        for j in range(len(i)):
+            if i[j]==0:
+                if j==0:
+                    k=j+1
+                    while i[k]==0 and k!=len(i)-1:##find next nonzero
+                        k+=1
+                    if k==len(i)-1:
+                        break
+                    i[j]=i[k]
+                else:
+                    i[j]=i[j-1]
+    IV=np.array(IV).T.tolist()
+    for i in IV:
+        for j in range(len(i)):
+            if i[j]==0:
+                if j==0:
+                    k=j+1
+                    while i[k]==0 and k!=len(i)-1:##find next nonzero
+                        k+=1
+                    i[j]=i[k]
+                    if k==len(i)-1:
+                        break
+                    
+                else:
+                    i[j]=i[j-1]
+    IV=np.array(IV).T.tolist()
+#    plt.plot(Iv)
     return IV
 #####################plot the surf
-def plotIV(S,K,T,callOpt,putOpt):
+def plotIV(K,T,callOpt,putOpt,para):
     X,Y = meshgrid(K, T)
-    iv=np.array(surfIV(S,K,T,callOpt,putOpt)).T
+    iv=np.array(surfIV(K,T,callOpt,putOpt,para)).T
     fig = plt.figure(figsize=(14,6))
     # `ax` is a 3D-aware axis instance, because of the projection='3d' keyword argument to add_subplot
     ax = fig.add_subplot(1, 2, 1, projection='3d')
@@ -155,10 +197,11 @@ def plotIV(S,K,T,callOpt,putOpt):
                            linewidth=0, antialiased=False)
     return surf
 ##########################################main function
-callOpt,putOpt,callStrike,putStrike=parseOpt(ticker,Date)
-iv=surfIV(S,K,T,callOpt,putOpt)
+callOpt,putOpt,callStrike,putStrike=parseOpt(para,Date)
+
+iv=surfIV(K,T,callOpt,putOpt,para)
 #plt.plot(K,iv)
-plotIV(S,K,T,callOpt,putOpt)
+plotIV(K,T,callOpt,putOpt,para)
 #ivo=[]
 #for k in K:
 #    i=callOpt["2019-01-17"][1].loc[k][0].replace(",","").replace("%","")
