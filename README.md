@@ -14,9 +14,9 @@ In this report of Credit-Spread-predicting-machine-learning, we selected various
 C++_Final_Projects analyzes the EPS surprise effect on stock prices, in which crawler are used to parse data from Yahoo finance
 
 
-![](C++_Final_Project/C++_Final_Project_by_Team1_1215_SAT/results/p4.png)
+![](results/p4.png)
 
-![](C++_Final_Project/C++_Final_Project_by_Team1_1215_SAT/results/p9.png)
+![](results/p9.png)
 
 
 ## Implied Volitility Marking and Visulization
