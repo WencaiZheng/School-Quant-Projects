@@ -20,7 +20,8 @@ In this report of Credit-Spread-predicting-machine-learning, we selected various
 
 ## IV is the Implied Volitility calculation project
 
+Implied volatility surface is a python python project parsing data from Yahoo finance and visualizing the implied volatility surface of the option I am interested in. Used for marking the implied volatility.
+
 ## PricebyCRR is the option pricing model based on CRR
 
-## Implied volatility surface is a python tool parsing data from Yahoo finance and visualizing the implied volatility surface of the option I am interested in.
 
