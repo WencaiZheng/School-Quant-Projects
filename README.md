@@ -1,6 +1,6 @@
 # School Quant Projects
 
-Projects I have done in internships or based on my own interests
+Projects I have done in school or just out of my interests
 
 ## Credit Spread Prediction
 
